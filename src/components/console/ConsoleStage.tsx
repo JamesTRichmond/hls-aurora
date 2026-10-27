@@ -261,7 +261,7 @@ export function ConsoleStage() {
         to="/archive"
         search={{ tab: "spec" }}
         className={cn(
-          "absolute bottom-3 left-1/2 z-40 hidden -translate-x-1/2 text-[10px] tracking-[0.16em] uppercase md:block",
+          "absolute left-4 top-[4.25rem] z-40 text-[10px] tracking-[0.16em] uppercase",
           crewOnTop ? "text-crew-muted/70 hover:text-crew-ivory" : "text-obs-faint hover:text-obs-text",
         )}
       >

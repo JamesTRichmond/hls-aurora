@@ -86,9 +86,34 @@ export function DeckHud() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
-        <div className="flex w-full min-w-0 flex-col justify-between p-3 sm:p-4">
-          <div className="pointer-events-auto flex flex-wrap gap-1.5">
+      <div className="min-h-0 flex-1" />
+
+      <div className="mb-36 flex flex-col gap-2 px-3 sm:px-4 md:mb-3">
+        <div
+          className={cn(
+            "pointer-events-none max-w-md space-y-0.5 text-[11px] leading-snug",
+            crew ? "font-crew-sans text-crew-ivory-dim" : "font-obs-mono text-obs-muted",
+          )}
+        >
+          {visibleRadio.map((l) => (
+            <p key={l.id} className="line-clamp-1">
+              <span className={crew ? "text-crew-accent" : "text-obs-faint"}>
+                [{l.channel}] {l.speaker}:
+              </span>{" "}
+              {l.text}
+            </p>
+          ))}
+        </div>
+
+        <div
+          className={cn(
+            "pointer-events-auto flex flex-col gap-2 p-2 shadow-lg",
+            crew
+              ? "rounded-crew-lg bg-crew-bg/92 ring-1 ring-crew-line-soft backdrop-blur-md"
+              : "bg-obs-bg/94 ring-1 ring-obs-line backdrop-blur-md",
+          )}
+        >
+          <div className="flex flex-wrap items-center gap-1.5">
             {INTENTS.map((it) => (
               <button
                 key={it.id}
@@ -110,98 +135,86 @@ export function DeckHud() {
                 <span className="ml-2 hidden opacity-60 sm:inline">{it.key}</span>
               </button>
             ))}
+            <div className="ml-auto flex min-w-0 flex-1 flex-wrap justify-end gap-1.5">
+              {near.length ? (
+                near.map((row) => {
+                  const on = focus?.type === row.type && focus.id === row.id;
+                  const label = crew ? row.crewName : row.obsName;
+                  return (
+                    <button
+                      key={`${row.type}-${row.id}`}
+                      type="button"
+                      onClick={() => performInteract({ type: row.type, id: row.id })}
+                      className={cn(
+                        "min-h-11 max-w-[11rem] truncate px-3 text-left text-xs",
+                        crew ? "rounded-crew-sm" : "rounded-obs font-obs-mono",
+                        on
+                          ? crew
+                            ? "bg-crew-ivory text-crew-bg-deep"
+                            : "bg-obs-text text-obs-bg"
+                          : crew
+                            ? "bg-crew-elevated/90 text-crew-ivory ring-1 ring-crew-line-soft"
+                            : "bg-obs-surface-2 text-obs-text",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })
+              ) : woke ? (
+                <p className={cn("px-1 py-2 text-xs", crew ? "text-crew-muted" : "font-obs-mono text-obs-faint")}>
+                  {crew ? "Nothing in reach." : "No subject on this tile."}
+                </p>
+              ) : null}
+            </div>
           </div>
-          <div className="pointer-events-auto mt-2 flex max-w-xl flex-wrap gap-1.5">
-            {near.length ? (
-              near.map((row) => {
-                const on = focus?.type === row.type && focus.id === row.id;
-                const label = crew ? row.crewName : row.obsName;
+
+          <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
+              {WATCH_TASKS.map((task) => {
+                const closed = Boolean(done[task.id]);
                 return (
                   <button
-                    key={`${row.type}-${row.id}`}
+                    key={task.id}
                     type="button"
-                    onClick={() => performInteract({ type: row.type, id: row.id })}
+                    onClick={() => {
+                      setIntent("use");
+                      walkToThing(task.where);
+                    }}
                     className={cn(
-                      "min-h-11 max-w-[11rem] truncate px-3 text-left text-xs",
+                      "min-h-10 shrink-0 px-2.5 text-left text-[11px] tracking-[0.04em] uppercase",
                       crew ? "rounded-crew-sm" : "rounded-obs font-obs-mono",
-                      on
+                      closed
                         ? crew
-                          ? "bg-crew-ivory text-crew-bg-deep"
-                          : "bg-obs-text text-obs-bg"
+                          ? "bg-crew-elevated/50 text-crew-nominal"
+                          : "bg-obs-surface text-obs-ok"
                         : crew
-                          ? "bg-crew-elevated/90 text-crew-ivory ring-1 ring-crew-line-soft"
+                          ? "text-crew-ivory ring-1 ring-crew-line-soft"
                           : "bg-obs-surface-2 text-obs-text",
                     )}
                   >
-                    {label}
+                    <span className={closed ? "text-crew-nominal" : "opacity-50"} aria-hidden>
+                      {closed ? "●" : "○"}
+                    </span>{" "}
+                    {crew ? task.crew : task.obs}
                   </button>
                 );
-              })
-            ) : woke ? (
-              <p className={cn("min-h-11 px-1 py-2 text-xs", crew ? "text-crew-muted" : "font-obs-mono text-obs-faint")}>
-                {crew ? "Nothing in reach." : "No subject on this tile."}
-              </p>
-            ) : null}
-          </div>
-          <div className="pointer-events-auto mt-2 flex max-w-xl gap-1.5 overflow-x-auto">
-            {WATCH_TASKS.map((task) => {
-              const closed = Boolean(done[task.id]);
-              return (
-                <button
-                  key={task.id}
-                  type="button"
-                  onClick={() => {
-                    setIntent("use");
-                    walkToThing(task.where);
-                  }}
-                  className={cn(
-                    "min-h-11 shrink-0 px-3 text-left text-[11px] tracking-[0.06em] uppercase",
-                    crew ? "rounded-crew-sm" : "rounded-obs font-obs-mono",
-                    closed
-                      ? crew
-                        ? "bg-crew-elevated/50 text-crew-nominal"
-                        : "bg-obs-surface text-obs-ok"
-                      : crew
-                        ? "bg-crew-bg/80 text-crew-ivory ring-1 ring-crew-line-soft"
-                        : "bg-obs-surface-2 text-obs-text",
-                  )}
-                >
-                  {closed ? "●" : "○"} {crew ? task.crew : task.obs}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-auto flex items-end justify-between gap-3">
-            <div
-              className={cn(
-                "pointer-events-none max-w-md space-y-1 text-[11px] leading-snug",
-                crew ? "font-crew-sans text-crew-ivory-dim" : "font-obs-mono text-obs-muted",
-              )}
-            >
-              {visibleRadio.map((l) => (
-                <p key={l.id} className="line-clamp-2">
-                  <span className={crew ? "text-crew-accent" : "text-obs-faint"}>
-                    [{l.channel}] {l.speaker}:
-                  </span>{" "}
-                  {l.text}
-                </p>
-              ))}
+              })}
             </div>
             <div
               className={cn(
-                "pointer-events-auto hidden shrink-0 items-center gap-2 sm:flex",
+                "hidden shrink-0 items-center gap-2 sm:flex",
                 crew ? "text-crew-muted" : "font-obs-mono text-obs-faint",
               )}
             >
               <div
                 className={cn(
-                  "flex h-14 w-20 flex-col justify-center px-2",
-                  crew ? "crew-panel rounded-crew-sm" : "obs-panel",
+                  "flex h-10 min-w-16 flex-col justify-center px-2",
+                  crew ? "rounded-crew-sm bg-crew-elevated/70" : "bg-obs-surface",
                 )}
               >
                 <p className="text-[9px] tracking-widest uppercase">{crew ? "ID" : "S-21"}</p>
-                <p className={cn("text-xs", crew ? "text-crew-ivory" : "text-obs-text")}>
+                <p className={cn("text-xs leading-none", crew ? "text-crew-ivory" : "text-obs-text")}>
                   {crew ? VIEWER.name.split(" ")[1] : "live"}
                 </p>
               </div>
@@ -209,12 +222,12 @@ export function DeckHud() {
                 type="button"
                 onClick={() => setPdaOpen(true)}
                 className={cn(
-                  "flex h-14 w-24 flex-col justify-center px-2 text-left",
-                  crew ? "crew-panel rounded-crew-sm" : "obs-panel",
+                  "flex h-10 min-w-16 flex-col justify-center px-2 text-left",
+                  crew ? "rounded-crew-sm bg-crew-elevated/70" : "bg-obs-surface",
                 )}
               >
                 <p className="text-[9px] tracking-widest uppercase">{crew ? "PDA" : "WS"}</p>
-                <p className={cn("text-xs", crew ? "text-crew-ivory" : "text-obs-text")}>
+                <p className={cn("text-xs leading-none", crew ? "text-crew-ivory" : "text-obs-text")}>
                   {tasksDone}/5
                 </p>
               </button>
