@@ -38,6 +38,8 @@ type ConsoleState = {
   woke: boolean;
   watchComplete: boolean;
   pulledOnce: boolean;
+  letterRead: boolean;
+  letterTaken: boolean;
   setLayer: (layer: Layer) => void;
   setScreen: (screen: ScreenId) => void;
   toggleLayer: () => void;
@@ -56,6 +58,8 @@ type ConsoleState = {
   markAsked: (id: string) => void;
   markWoke: () => void;
   markPulled: () => void;
+  markLetterRead: () => void;
+  markLetterTaken: () => void;
 };
 
 let radioN = 0;
@@ -78,6 +82,8 @@ export const useConsole = create<ConsoleState>((set, get) => ({
   woke: false,
   watchComplete: false,
   pulledOnce: false,
+  letterRead: false,
+  letterTaken: false,
   setLayer: (layer) => {
     if (get().layer === layer) return;
     set({
@@ -131,6 +137,11 @@ export const useConsole = create<ConsoleState>((set, get) => ({
   markAsked: (id) => set((s) => ({ asked: { ...s.asked, [id]: true } })),
   markWoke: () => set({ woke: true }),
   markPulled: () => set({ pulledOnce: true }),
+  markLetterRead: () => set({ letterRead: true }),
+  markLetterTaken: () => {
+    if (get().letterRead || get().letterTaken) return;
+    set({ letterTaken: true });
+  },
 }));
 
 export function screenIndex(id: ScreenId): number {

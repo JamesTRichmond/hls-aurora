@@ -1,4 +1,6 @@
-import { TRUNCATION_MINUTES, VIEWER } from "@/lib/mission";
+import { crewLetter, obsLetter } from "@/game/letter";
+import { seamClocks } from "@/game/seam";
+import { VIEWER, VOYAGE } from "@/lib/mission";
 import {
   MAP_H,
   MAP_W,
@@ -91,29 +93,21 @@ export const sim = {
   layer: "crew" as Layer,
   phaseId: "wake" as WatchPhaseId,
   phaseShift: null as WatchPhase | null,
+  seamSeen: 0,
+  seamPulse: 0,
 };
 
-function pad2(n: number) {
-  return n.toString().padStart(2, "0");
-}
-
-function hms(total: number) {
-  const s = ((Math.floor(total) % 86400) + 86400) % 86400;
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  return `${pad2(h)}:${pad2(m)}:${pad2(sec)}`;
-}
-
-/** 8× play time. Ship starts 06:00. Facility stays 49 minutes ahead. */
+/** 8× play time. Ship starts 06:00. Facility starts 49 minutes ahead and gains a minute at each seam. */
 export function liveWatch() {
-  const shipSec = 6 * 3600 + Math.floor(sim.time * 8);
-  const facSec = shipSec + TRUNCATION_MINUTES * 60;
+  const cut = seamClocks(sim.time);
   const play = sim.time;
   const phase = PHASES.find((p) => play < p.until) ?? PHASES[PHASES.length - 1]!;
   return {
-    ship: hms(shipSec),
-    facility: hms(facSec),
+    ship: cut.ship,
+    facility: cut.facility,
+    seams: cut.seams,
+    gapMin: cut.gapMin,
+    seamOpen: cut.open,
     phase: { id: phase.id, crew: phase.crew, obs: phase.obs } as WatchPhase,
   };
 }
@@ -189,6 +183,24 @@ function tryMove(ent: { x: number; y: number }, dx: number, dy: number) {
   if (!blocked(ent.x, ny)) {
     ent.y = ny;
   }
+}
+
+/** Restores the lived watch. A null place stays at spawn. A place inside a wall is refused. */
+export function applyWatchPlace(place: {
+  simTime: number;
+  x: number | null;
+  y: number | null;
+  facing: number | null;
+}) {
+  sim.time = place.simTime;
+  sim.seamSeen = seamClocks(place.simTime).seams;
+  sim.seamPulse = 0;
+  sim.last = 0;
+  if (place.x == null || place.y == null) return;
+  if (blocked(place.x, place.y)) return;
+  sim.x = place.x;
+  sim.y = place.y;
+  if (place.facing != null) sim.facing = place.facing;
 }
 
 function neighbors(tx: number, ty: number): { x: number; y: number }[] {
@@ -271,6 +283,10 @@ export function stepSim(now: number) {
   if (watch.phase.id !== sim.phaseId) {
     sim.phaseId = watch.phase.id;
     sim.phaseShift = watch.phase;
+  }
+  if (watch.seams > sim.seamSeen) {
+    sim.seamSeen = watch.seams;
+    sim.seamPulse = watch.seams;
   }
 
   const k = held();
@@ -439,6 +455,7 @@ export function interactCopy(
   intent: Intent,
   focus: NonNullable<Focus>,
   pulledOnce = false,
+  letterTaken = false,
 ) {
   if (focus.type === "npc") {
     const n = sim.npcs.find((p) => p.id === focus.id)!;
@@ -486,11 +503,17 @@ export function interactCopy(
         : layer === "crew"
           ? t.crewAsk
           : t.obsAsk;
+  if (t.id === "letter" && intent === "examine") {
+    const taken = letterTaken;
+    body = layer === "crew" ? crewLetter(t.crewExamine, taken) : obsLetter(t.obsExamine, taken);
+  }
   if (t.kind === "clock" && intent === "examine") {
     body =
       layer === "crew"
-        ? `31 October 2031 · ${clocks.ship}. ${clocks.phase.crew} on day 231.`
-        : `Crew clock ${clocks.ship}. Facility clock ${clocks.facility}. Forty-nine minutes uncorrected from Cycle 10.`;
+        ? clocks.seamOpen
+          ? `${clocks.ship}. The face skipped. You did not feel the minute.`
+          : `${VOYAGE.nowLabel} · ${clocks.ship}. ${clocks.phase.crew} on day ${VOYAGE.elapsedDays}.`
+        : `Crew clock ${clocks.ship}. Facility clock ${clocks.facility}. ${clocks.gapMin} minutes uncorrected from Cycle ${VOYAGE.truncationCycle}.`;
   }
   if (intent === "examine" && layer === "crew" && pulledOnce && t.crewResidue) {
     body = `${body} ${t.crewResidue}`;

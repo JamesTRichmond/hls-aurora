@@ -114,6 +114,7 @@ export const VOYAGE = {
   shipClock: "06:00:00",
   facilityClock: "06:49:00",
   truncationMinutes: TRUNCATION_MINUTES,
+  truncationCycle: 10,
   viewerId: "S-21",
   commsDelay: "14h 02m",
 } as const;

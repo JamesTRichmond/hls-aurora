@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
+import { takeLetterOnSeam } from "@/game/letter";
 import { performInteract } from "@/lib/station/act";
 import { tickWorldAudio } from "@/lib/station/audio";
 import { beginLoad } from "@/lib/station/assets";
 import { cameraFor, drawStation } from "@/lib/station/draw";
-import { clickMove, currentRoom, nearestFocus, sim, stepSim, type Layer } from "@/lib/station/sim";
+import { clickMove, currentRoom, liveWatch, nearestFocus, sim, stepSim, type Layer } from "@/lib/station/sim";
 import { THINGS, TILE } from "@/lib/station/world";
 import { useConsole } from "@/lib/store";
 
@@ -79,6 +80,27 @@ export function StationCanvas({
                     },
               );
             }
+          }
+          if (sim.seamPulse) {
+            const gap = liveWatch().gapMin;
+            sim.seamPulse = 0;
+            const watch = useConsole.getState();
+            if (takeLetterOnSeam(watch.letterRead, watch.letterTaken)) watch.markLetterTaken();
+            useConsole.getState().pushRadio(
+              skin === "crew"
+                ? {
+                    channel: "watch",
+                    speaker: "deck",
+                    text: "The lights dipped. The clock did not.",
+                    layer: "crew",
+                  }
+                : {
+                    channel: "PX-04",
+                    speaker: "ops",
+                    text: `Cut. Facility ahead ${gap} min. Do not reconcile.`,
+                    layer: "observer",
+                  },
+            );
           }
         } else sim.last = now;
       }

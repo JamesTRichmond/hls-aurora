@@ -1,4 +1,4 @@
-import type { Layer } from "@/lib/station/sim";
+import { liveWatch, type Layer } from "@/lib/station/sim";
 import type { RoomId } from "@/lib/station/world";
 
 let ctx: AudioContext | null = null;
@@ -11,6 +11,8 @@ let noiseGain: GainNode | null = null;
 let started = false;
 let stepAcc = 0;
 let lastRoom: string | null = null;
+let lastPhase: string | null = null;
+let lastSeam = false;
 
 function ensure() {
   if (ctx || typeof window === "undefined") return;
@@ -96,14 +98,24 @@ export function setAmbience(layer: Layer, room?: RoomId | null) {
     cut = 110;
     drone = 0.02;
   }
-  filter?.frequency.setTargetAtTime(cut, now, 0.4);
+  const phase = liveWatch().phase.id;
+  const open = liveWatch().seamOpen;
+  const phaseCut = phase === "wake" ? 1.18 : phase === "quiet" ? 0.68 : phase === "midwatch" ? 0.88 : 1;
+  const phaseDrone = phase === "quiet" ? 0.6 : phase === "wake" ? 1.12 : phase === "walkdown" ? 1 : 0.86;
+  const seamCut = open ? 0.55 : 1;
+  const seamDrone = open ? 0.7 : 1;
+  filter?.frequency.setTargetAtTime(cut * phaseCut * seamCut, now, 0.2);
   noiseGain?.gain.setTargetAtTime(hiss, now, 0.35);
-  master.gain.setTargetAtTime(drone, now, 0.25);
+  master.gain.setTargetAtTime(drone * phaseDrone * seamDrone, now, 0.2);
   lastRoom = room ?? null;
+  lastPhase = phase;
+  lastSeam = open;
 }
 
 export function tickWorldAudio(layer: Layer, speed: number, dt: number, room?: RoomId | null) {
-  if (room !== lastRoom) setAmbience(layer, room);
+  const phase = liveWatch().phase.id;
+  const open = liveWatch().seamOpen;
+  if (room !== lastRoom || phase !== lastPhase || open !== lastSeam) setAmbience(layer, room);
   if (!ctx || !master || speed < 0.18) {
     stepAcc = 0;
     return;

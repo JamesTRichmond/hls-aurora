@@ -23,7 +23,7 @@ export function performInteract(target?: Focus) {
     });
     return;
   }
-  const copy = interactCopy(s.layer, s.intent, focus, s.pulledOnce);
+  const copy = interactCopy(s.layer, s.intent, focus, s.pulledOnce, s.letterTaken);
   s.setCard({
     title: copy.title,
     body: copy.body,
@@ -70,6 +70,9 @@ export function performInteract(target?: Focus) {
           : `Flag on ${focus.id} held.`,
       layer: s.layer,
     });
+  }
+  if (s.intent === "examine" && focus.type === "thing" && focus.id === "letter") {
+    s.markLetterRead();
   }
   if (s.intent === "use" && focus.type === "thing" && (focus.id === "radio" || focus.id === "letter")) {
     s.setScreen("message");
