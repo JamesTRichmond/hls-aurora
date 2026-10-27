@@ -637,6 +637,7 @@ function drawPerson(
   you: boolean,
   t: number,
   moving: boolean,
+  speak: boolean,
 ) {
   const p = pal(layer);
   const px = x * TILE;
@@ -701,7 +702,7 @@ function drawPerson(
   ctx.fillText(layer === "crew" ? person.given : person.id, 0, 28);
   if (!you) {
     const line = phaseTalk(person.id, liveWatch().phase.id, layer);
-    if (line && Math.hypot(x - sim.x, y - sim.y) < 2.4) {
+    if (speak && line && Math.hypot(x - sim.x, y - sim.y) < 2.15) {
       ctx.font =
         layer === "crew"
           ? "500 11px 'Source Sans 3', sans-serif"
@@ -739,11 +740,13 @@ function drawRoomLabels(ctx: CanvasRenderingContext2D, layer: Layer) {
       : "500 10px 'IBM Plex Mono', monospace";
   ctx.textAlign = "left";
   for (const r of ROOMS) {
-    ctx.fillText(
-      layer === "crew" ? r.crewName.toUpperCase() : r.obsName.toUpperCase(),
-      r.x * TILE + 8,
-      r.y * TILE + 16,
-    );
+    const label = layer === "crew" ? r.crewName.toUpperCase() : r.obsName.toUpperCase();
+    const lx = (r.x + r.w / 2) * TILE;
+    const ly = (r.y + 0.55) * TILE;
+    const near = Math.hypot(sim.x - (r.x + r.w / 2), sim.y - (r.y + 0.55)) < 1.7;
+    ctx.globalAlpha = near ? 0.08 : 0.5;
+    ctx.textAlign = "center";
+    ctx.fillText(label, lx, ly);
   }
   ctx.restore();
 }
@@ -863,10 +866,20 @@ export function drawStation(
   drawRoomLabels(ctx, layer);
 
   const sprites: { y: number; row: number; draw: () => void }[] = [];
+  let speaker: string | null = null;
+  let speakerD = 2.15;
+  for (const n of sim.npcs) {
+    const d = Math.hypot(n.px - sim.x, n.py - sim.y);
+    if (d < speakerD) {
+      speakerD = d;
+      speaker = n.id;
+    }
+  }
   sprites.push({
     y: sim.y,
     row: Math.floor(sim.y),
-    draw: () => drawPerson(ctx, VIEWER, sim.x, sim.y, sim.facing, layer, true, t, sim.speed > 0.15),
+    draw: () =>
+      drawPerson(ctx, VIEWER, sim.x, sim.y, sim.facing, layer, true, t, sim.speed > 0.15, false),
   });
   for (const n of sim.npcs) {
     const person = CREW.find((c) => c.id === n.id) ?? crewOf(n.id);
@@ -876,7 +889,8 @@ export function drawStation(
     sprites.push({
       y: n.py,
       row: Math.floor(n.py),
-      draw: () => drawPerson(ctx, person, n.px, n.py, n.facing, layer, false, t, moving),
+      draw: () =>
+        drawPerson(ctx, person, n.px, n.py, n.facing, layer, false, t, moving, n.id === speaker),
     });
   }
 
@@ -895,6 +909,11 @@ export function drawStation(
   }
   drawLighting(ctx, layer, t);
   ctx.restore();
+  const cut = liveWatch();
+  if (cut.seamOpen && useConsole.getState().woke) {
+    ctx.fillStyle = layer === "crew" ? "rgba(4,8,14,0.34)" : "rgba(0,0,0,0.28)";
+    ctx.fillRect(0, 0, viewW, viewH);
+  }
   if (useConsole.getState().woke) drawMinimap(ctx, layer, viewW, viewH);
 }
 

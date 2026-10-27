@@ -1,5 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
+import { readWatchMemory, serializeWatchMemory, writeWatchMemory } from "@/game/memory";
+import { WATCH_TASKS } from "@/game/watch";
 import { ControlsSheet } from "@/components/deck/ControlsSheet";
 import { DeckHud } from "@/components/deck/DeckHud";
 import { PdaShell } from "@/components/deck/PdaShell";
@@ -8,6 +10,7 @@ import { VIEWER, VOYAGE } from "@/lib/mission";
 import { performInteract } from "@/lib/station/act";
 import { playCurtain, setAmbience, unlockAmbience } from "@/lib/station/audio";
 import {
+  applyWatchPlace,
   clearKeys,
   clickMove,
   setKey,
@@ -46,6 +49,52 @@ export function ConsoleStage() {
   const woke = useConsole((s) => s.woke);
   const markWoke = useConsole((s) => s.markWoke);
   const pushRadio = useConsole((s) => s.pushRadio);
+  useLayoutEffect(() => {
+    const m = readWatchMemory();
+    applyWatchPlace(m);
+    useConsole.setState({
+      cycle12Initiated: m.cycle12Initiated,
+      done: m.done,
+      asked: m.asked,
+      woke: m.woke,
+      pulledOnce: m.pulledOnce,
+      hintSeen: m.hintSeen,
+      letterRead: m.letterRead,
+      letterTaken: m.letterTaken,
+      watchComplete: WATCH_TASKS.every((t) => m.done[t.id]),
+    });
+    const snapshot = () => {
+      const s = useConsole.getState();
+      return serializeWatchMemory({
+        version: 2,
+        cycle12Initiated: s.cycle12Initiated,
+        done: s.done,
+        asked: s.asked,
+        woke: s.woke,
+        pulledOnce: s.pulledOnce,
+        hintSeen: s.hintSeen,
+        simTime: sim.time,
+        x: sim.x,
+        y: sim.y,
+        facing: sim.facing,
+        letterRead: s.letterRead,
+        letterTaken: s.letterTaken,
+      });
+    };
+    let last = snapshot();
+    const write = () => {
+      const next = snapshot();
+      if (next === last) return;
+      last = next;
+      writeWatchMemory(JSON.parse(next) as ReturnType<typeof readWatchMemory>);
+    };
+    const unsub = useConsole.subscribe(write);
+    const pulse = window.setInterval(write, 1000);
+    return () => {
+      unsub();
+      window.clearInterval(pulse);
+    };
+  }, []);
   const pull = () => {
     const next = useConsole.getState().layer === "crew" ? "observer" : "crew";
     toggle();
