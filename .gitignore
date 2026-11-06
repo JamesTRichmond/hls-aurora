@@ -1,7 +1,9 @@
 node_modules/
 dist/
 .vercel/
-.grok/
+.grok/*
+# The template's shipped app env (auth off) is part of the app, not platform state.
+!.grok/app-env.json
 screenshots/
 artifacts/
 .env

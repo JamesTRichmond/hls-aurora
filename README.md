@@ -1,5 +1,7 @@
 # HLS Aurora
 
+[![CI](https://github.com/JamesTRichmond/hls-aurora/actions/workflows/ci.yml/badge.svg)](https://github.com/JamesTRichmond/hls-aurora/actions/workflows/ci.yml)
+
 A walkable two-layer narrative prototype. Crew member Jules Moreau wakes aboard a kind, orderly starship. A brass pull on the right draws that layer aside and shows the same floor plan as the research site that is actually running the voyage. Both layers are complete, and neither wins.
 
 It borrows the grammar of [Space Station 13](https://spacestation13.com/) (rooms, intent verbs, a pocket computer, radio as a log, ID-locked doors) without the combat. The antagonist is the experiment. Everything in it is fiction: no real lab, person, or measurement.
